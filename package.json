@@ -1,0 +1,22 @@
+{
+  "name": "@choux/json-splitter",
+  "author": "danielseehausen",
+  "version": "0.0.0",
+  "description": "Split JSON into multiple chunks, based on its size! Are _YOU_ trying to get around pesky protocol payload limits? Do _YOU_ have some other reason to split up big chunks of JSON and are looking for a judgement free solution? **split-JSON** is here for you!",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "files": [
+    "index.js",
+    "src/"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^25.4.0",
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-plugin-import": "^2.19.1",
+    "eslint-plugin-jest-formatting": "^1.2.0"
+  }
+}
