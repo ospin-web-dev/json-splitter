@@ -1,6 +1,71 @@
 const uuidv4 = require('uuid').v4
 
+const ObjUtils = require('./ObjUtils')
+
 class Splitter {
+
+  static get MAX_CHUNKS() { return 1000 }
+
+  static get DEFAULT_CHUNK_HEADER() {
+    return {
+      groupId: uuidv4(),
+      totalChunks: this.MAX_CHUNKS,
+      chunkIdx: this.MAX_CHUNKS - 1,
+    }
+  }
+
+  static get MAX_CHUNK_HEADER_SIZE() {
+    // a limit for the total size a large header could take up
+    return ObjUtils.getSize(this.DEFAULT_CHUNK_HEADER + 10)
+  }
+
+  static get FIXED_CHUNK_SIZE_OVERHEAD() {
+    return this.MAX_CHUNK_HEADER_SIZE + 2 // the + 2 is from the base object: '{}'
+  }
+
+  static get MINIMUM_CHUNK_SIZE() {
+    return this.MAX_CHUNK_HEADER_SIZE * 2
+  }
+
+  static assertValidMaxChunkSize(obj, maxChunkSize, targetKey) {
+    // ensure the user provided 'maxChunkSize' is big enough
+    if (targetKey) {
+      /* if a targetKey was provided to break up a nested object
+       * we reduce the free space per chunk by removing the amount of space
+       * all of the top level keys require (this assumed all of the top
+       * level keys are sent with every chunk, with the target being the
+       * broken up across chunks
+      */
+      const upperKeysSizeReq = ObjUtils.getSize({ ...obj, [targetKey]: {} })
+      const remainingMaxChunkSize = maxChunkSize - upperKeysSizeReq
+      this.assertValidMaxChunkSize(obj[targetKey], remainingMaxChunkSize)
+      return
+    }
+
+    const freeSpacePerChunk = maxChunkSize - this.FIXED_CHUNK_SIZE_OVERHEAD
+
+    const { largestKey, largestPairSize } = ObjUtils.getLargestKeyValuePairSize(obj)
+
+    if (freeSpacePerChunk < largestPairSize) {
+      const value = obj[largestKey]
+      throw new Error(`maxChunkSize too small for key value: [ ${largestKey}, ${value} ]`)
+    }
+  }
+
+  static chunkingRequired(obj, maxChunkSize) {
+    const totalSize = ObjUtils.getSize(obj)
+    return (totalSize >= maxChunkSize)
+  }
+
+  static assertMinimumChunkSize(maxChunkSize) {
+    if (maxChunkSize < this.MINIMUM_CHUNK_SIZE) {
+      throw new Error(`maxChunkSize must be greater than minimum of ${this.MINIMUM_CHUNK_SIZE}`)
+    }
+  }
+
+  static addKeyValueToChunk(chunk, key, value) {
+    chunk[key] = value
+  }
 
   static get DEFAULT_OPTIONS() {
     return {
@@ -9,100 +74,54 @@ class Splitter {
     }
   }
 
-  static get DEFAULT_CHUNK_HEADER() {
-    return {
-      groupId: uuidv4(),
-      totalChunks: null,
-      chunkIdx: null,
-    }
-  }
-
-  static get MAX_CHUNKS() { return 100 }
-
-  static get MAX_CHUNK_HEADER_SIZE() {
-    return this.getSize({
-      ...this.DEFAULT_CHUNK_HEADER,
-      totalChunks: this.MAX_CHUNKS,
-      chunkIdx: this.MAX_CHUNKS - 1,
-    })
-  }
-
-  static assertType(value) {
-    const type = typeof value
-    const valid = (
-      !Array.isArray(value)
-      && (type === 'string' || type === 'object')
-      && !!value // null check
-    )
-
-    if (!valid) {
-      throw new Error(`unsupported value: ${value}`)
-    }
-  }
-
-  static getLargestKeyValuePairSize(obj) {
-    return Object.keys(obj).reduce(({ largestKey, largestPair }, key) => {
-      const size = this.getSize({ [key]: obj[key] })
-
-      return size > largestPair
-        ? { largestKey: key, largestPair: size }
-        : { largestKey, largestPair }
-
-    }, { largestKey: null, largestPair: -1 })
-  }
-
-  static assertValidMaxChunkSize(obj, maxChunkSize, targetKey) {
-    if (targetKey) {
-      this.assertValidMaxChunkSize(obj[targetKey], maxChunkSize)
-    }
-
-    const freeSpacePerChunk = maxChunkSize - this.MAX_CHUNK_HEADER_SIZE
-
-    const { largestKey, largestPair } = this.getLargestKeyValuePairSize(obj)
-
-    if (freeSpacePerChunk <= largestPair) {
-      const value = obj[largestKey]
-      throw new Error(`maxChunkSize too small for key value: [ ${largestKey}, ${value} ]`)
-    }
-  }
-
-  static serializeValue(value) {
-    this.assertType(value)
-
-    const string = typeof value === 'object'
-      ? JSON.stringify(value)
-      : value
-
-    return JSON.parse(string) // for the deep clone
-  }
-
-  static getSize(value) {
-    const str = typeof value === 'string' ? value : JSON.stringify(value)
-    return Buffer.from(str).length
-  }
-
-  static chunkingRequired(obj, maxChunkSize) {
-    const totalSize = this.getSize(obj)
-    return (totalSize >= maxChunkSize)
-  }
-
-  static split(value, options) {
+  static split(strOrObj, options) {
     const { maxChunkSize, targetKey } = { ...this.DEFAULT_OPTIONS, ...options }
+    this.assertMinimumChunkSize(maxChunkSize)
 
-    const obj = this.serializeValue(value)
+    const obj = ObjUtils.serializeToObj(strOrObj)
     if (!this.chunkingRequired(obj, maxChunkSize)) return [ obj ]
 
     this.assertValidMaxChunkSize(obj, maxChunkSize, targetKey)
 
-    const multiMessage = {
-      ...this.DEFAULT_CHUNK_HEADER,
-      groupId: uuidv4(),
+    if (targetKey) return false
+
+    const chunks = [{}]
+
+    const getLastChunk = () => chunks[chunks.length - 1]
+
+    const chunkHasRoomFor = (chunk, addition, maxSize) => {
+      return (ObjUtils.getSize(chunk) + addition) <= maxSize
     }
 
-    return [
-      { ...obj, multiMessage: { ...multiMessage, totalChunks: 2, chunkIdx: 0 } },
-      { ...obj, multiMessage: { ...multiMessage, totalChunks: 2, chunkIdx: 1 } },
-    ]
+    const allowedSize = maxChunkSize - this.FIXED_CHUNK_SIZE_OVERHEAD
+
+    for (const [key, value] of Object.entries(obj)) {
+      const currentChunk = getLastChunk()
+
+      const keyValueSize = ObjUtils.getKeyValueSize(key, value)
+      const chunkCanFit = chunkHasRoomFor(currentChunk, keyValueSize, allowedSize)
+
+      if (chunkCanFit) {
+        this.addKeyValueToChunk(currentChunk, key, value)
+      } else {
+        chunks.push({})
+        const newCurrentChunk = getLastChunk()
+        this.addKeyValueToChunk(newCurrentChunk, key, value)
+      }
+    }
+
+    const groupId = uuidv4()
+    const chunksWithMetaData = chunks.map((chunk, idx) => {
+      chunk.multiMessage = {
+        groupId,
+        chunkIdx: idx,
+        totalChunks: chunks.length,
+      }
+
+      return chunk
+    })
+
+    return chunksWithMetaData
   }
 
 }
