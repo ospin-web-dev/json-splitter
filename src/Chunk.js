@@ -20,6 +20,10 @@ class Chunk {
     return this.getSpaceRemaining() >= additionSize
   }
 
+  canNotFit(key, value) {
+    return !this.canFit(key, value)
+  }
+
   assertCanFit(key, value) {
     if (!this.canFit(key, value)) {
       throw new Error(`can not fit ${key}, ${value} into ${this}`)
@@ -30,7 +34,6 @@ class Chunk {
     this.assertCanFit(key, value)
     ObjUtils.addKeyValue(this.obj, key, value)
   }
-
 
 }
 

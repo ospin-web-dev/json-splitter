@@ -1,6 +1,7 @@
 const uuidv4 = require('uuid').v4
 
 const ObjUtils = require('./ObjUtils')
+const Chunk = require('./Chunk')
 
 class Splitter {
 
@@ -32,14 +33,13 @@ class Splitter {
     if (targetKey) {
       /* if a targetKey was provided to break up a nested object
        * we reduce the free space per chunk by removing the amount of space
-       * all of the top level keys require (this assumed all of the top
-       * level keys are sent with every chunk, with the target being the
-       * broken up across chunks
+       * all of the top level keys require (as all of the top
+       * level keys are sent with every chunk). The target is then
+       * broken up across chunks. See tests
       */
       const upperKeysSizeReq = ObjUtils.getSize({ ...obj, [targetKey]: {} })
       const remainingMaxChunkSize = maxChunkSize - upperKeysSizeReq
-      this.assertValidMaxChunkSize(obj[targetKey], remainingMaxChunkSize)
-      return
+      return this.assertValidMaxChunkSize(obj[targetKey], remainingMaxChunkSize)
     }
 
     const freeSpacePerChunk = maxChunkSize - this.FIXED_CHUNK_SIZE_OVERHEAD
@@ -63,15 +63,44 @@ class Splitter {
     }
   }
 
-  static addKeyValueToChunk(chunk, key, value) {
-    chunk[key] = value
-  }
-
   static get DEFAULT_OPTIONS() {
     return {
       maxChunkSize: 125000,
       targetKey: null,
     }
+  }
+
+  static assignHeaderToChunks(chunks) {
+    const groupId = uuidv4()
+
+    chunks.forEach((chunk, idx) => {
+      chunk.multiMessage = {
+        groupId,
+        chunkIdx: idx,
+        totalChunks: chunks.length,
+      }
+
+      return chunk
+    })
+  }
+
+  static createChunksFromObj(obj, maxChunkSize) {
+    // remove the max space the headers might take up from the space a chunk has to grow
+    const spaceForGrowth = maxChunkSize - this.FIXED_CHUNK_SIZE_OVERHEAD
+
+    const last = arr => arr[arr.length - 1]
+    const addNewChunk = arr => arr.push(new Chunk(spaceForGrowth))
+
+    return Object.entries(obj).reduce((chunks, [ key, value ]) => {
+      if (last(chunks).canNotFit(key, value)) {
+        addNewChunk(chunks)
+      }
+      // A the biggest key + value will always be able to fit into an empty chunk
+      // that was asserted in `assertValidMaxChunkSize`
+      last(chunks).addKeyValue(key, value)
+
+      return chunks
+    }, [ new Chunk(spaceForGrowth) ])
   }
 
   static split(strOrObj, options) {
@@ -83,45 +112,13 @@ class Splitter {
 
     this.assertValidMaxChunkSize(obj, maxChunkSize, targetKey)
 
+    // TODO: remove
     if (targetKey) return false
 
-    const chunks = [{}]
+    const chunks = this.createChunksFromObj(obj, maxChunkSize)
+    this.assignHeaderToChunks(chunks)
 
-    const getLastChunk = () => chunks[chunks.length - 1]
-
-    const chunkHasRoomFor = (chunk, addition, maxSize) => {
-      return (ObjUtils.getSize(chunk) + addition) <= maxSize
-    }
-
-    const allowedSize = maxChunkSize - this.FIXED_CHUNK_SIZE_OVERHEAD
-
-    for (const [key, value] of Object.entries(obj)) {
-      const currentChunk = getLastChunk()
-
-      const keyValueSize = ObjUtils.getKeyValueSize(key, value)
-      const chunkCanFit = chunkHasRoomFor(currentChunk, keyValueSize, allowedSize)
-
-      if (chunkCanFit) {
-        this.addKeyValueToChunk(currentChunk, key, value)
-      } else {
-        chunks.push({})
-        const newCurrentChunk = getLastChunk()
-        this.addKeyValueToChunk(newCurrentChunk, key, value)
-      }
-    }
-
-    const groupId = uuidv4()
-    const chunksWithMetaData = chunks.map((chunk, idx) => {
-      chunk.multiMessage = {
-        groupId,
-        chunkIdx: idx,
-        totalChunks: chunks.length,
-      }
-
-      return chunk
-    })
-
-    return chunksWithMetaData
+    return chunks
   }
 
 }
