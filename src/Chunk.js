@@ -3,16 +3,16 @@ const ObjUtils = require('./ObjUtils')
 class Chunk {
 
   constructor(maxSize) {
-    this.maxSize = maxSize
     this.obj = {}
+    this.maxSize = maxSize
   }
 
-  getSize() {
+  getSpaceUsed() {
     return ObjUtils.getSize(this.obj)
   }
 
   getSpaceRemaining() {
-    return this.maxSize - this.getSize()
+    return this.maxSize - this.getSpaceUsed()
   }
 
   canFit(key, value) {
@@ -26,7 +26,7 @@ class Chunk {
 
   assertCanFit(key, value) {
     if (!this.canFit(key, value)) {
-      throw new Error(`can not fit ${key}, ${value} into ${this}`)
+      throw new Error(`can not fit ${key}, ${value} into ${JSON.stringify(this.obj)}.\nPayload size: ${ObjUtils.getKeyValueSize(key, value)}.\nSpace used: ${this.getSpaceUsed()}/${this.maxSize}`)
     }
   }
 

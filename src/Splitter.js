@@ -28,8 +28,8 @@ class Splitter {
     return this.MAX_CHUNK_HEADER_SIZE * 2
   }
 
-  static assertValidMaxChunkSize(obj, maxChunkSize, targetKey) {
-    // ensure the user provided 'maxChunkSize' is big enough
+  static assertValidMaxChunkSize(obj, spaceForGrowth, targetKey) {
+    // ensure the chunk has enough room to fit the largest key + value
     if (targetKey) {
       /* if a targetKey was provided to break up a nested object
        * we reduce the free space per chunk by removing the amount of space
@@ -38,15 +38,13 @@ class Splitter {
        * broken up across chunks. See tests
       */
       const upperKeysSizeReq = ObjUtils.getSize({ ...obj, [targetKey]: {} })
-      const remainingMaxChunkSize = maxChunkSize - upperKeysSizeReq
+      const remainingMaxChunkSize = spaceForGrowth - upperKeysSizeReq
       return this.assertValidMaxChunkSize(obj[targetKey], remainingMaxChunkSize)
     }
 
-    const freeSpacePerChunk = maxChunkSize - this.FIXED_CHUNK_SIZE_OVERHEAD
-
     const { largestKey, largestPairSize } = ObjUtils.getLargestKeyValuePairSize(obj)
 
-    if (freeSpacePerChunk < largestPairSize) {
+    if (spaceForGrowth < largestPairSize) {
       const value = obj[largestKey]
       throw new Error(`maxChunkSize too small for key value: [ ${largestKey}, ${value} ]`)
     }
@@ -84,10 +82,8 @@ class Splitter {
     })
   }
 
-  static createChunksFromObj(obj, maxChunkSize) {
+  static createChunksFromObj(obj, spaceForGrowth) {
     // remove the max space the headers might take up from the space a chunk has to grow
-    const spaceForGrowth = maxChunkSize - this.FIXED_CHUNK_SIZE_OVERHEAD
-
     const last = arr => arr[arr.length - 1]
     const addNewChunk = arr => arr.push(new Chunk(spaceForGrowth))
 
@@ -110,12 +106,13 @@ class Splitter {
     const obj = ObjUtils.serializeToObj(strOrObj)
     if (!this.chunkingRequired(obj, maxChunkSize)) return [ obj ]
 
-    this.assertValidMaxChunkSize(obj, maxChunkSize, targetKey)
+    const chunkSizeLimit = maxChunkSize - this.MAX_CHUNK_HEADER_SIZE
+    this.assertValidMaxChunkSize(obj, chunkSizeLimit, targetKey)
 
     // TODO: remove
     if (targetKey) return false
 
-    const chunks = this.createChunksFromObj(obj, maxChunkSize)
+    const chunks = this.createChunksFromObj(obj, chunkSizeLimit)
     this.assignHeaderToChunks(chunks)
 
     return chunks

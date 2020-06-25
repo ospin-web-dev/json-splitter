@@ -62,7 +62,7 @@ describe('Splitter', () => {
   })
 
   describe('split', () => {
-    describe('when the maxChunkSize under the minimum', () => {
+    describe('when the maxChunkSize is under the minimum', () => {
       it('throws error', () => {
         const obj = { a: '0123456789' }
 
@@ -115,14 +115,8 @@ describe('Splitter', () => {
           } = ObjUtils.getLargestKeyValuePairSize(obj.data)
 
           const spaceReqWithoutHeaders = topLevelKeysSize + largestTargetKeySize
-          const spaceReqWithHeaders = spaceReqWithoutHeaders + Splitter.FIXED_CHUNK_SIZE_OVERHEAD
 
-          const maxChunkSize = spaceReqWithoutHeaders + 10
-
-          expect(spaceReqWithoutHeaders).toBeLessThan(maxChunkSize)
-          expect(spaceReqWithHeaders).toBeGreaterThan(maxChunkSize)
-
-          const opts = { maxChunkSize, targetKey: 'data' }
+          const opts = { maxChunkSize: spaceReqWithoutHeaders, targetKey: 'data' }
           expect(() => Splitter.split(obj, opts))
             .toThrow(`maxChunkSize too small for key value: [ d, ${obj.data.d} ]`)
         })
@@ -144,20 +138,22 @@ describe('Splitter', () => {
 
     describe('when the payload is over the maxChunkSize', () => {
 
-      const UUIDV4_REGEX = /[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}/
-      const multiMessageSchema = Joi.object({
-        groupId: Joi.string().required().pattern(UUIDV4_REGEX),
-        chunkIdx: Joi.number().required(),
-        totalChunks: Joi.number().required(),
-      })
-
       it('adds the proper multiMessage property to each of the returned objects', () => {
-        const repeat = 100
-        const obj = { a: Array(repeat).fill(1), c: Array(repeat).fill(2) }
+        const obj = {
+          a: Array(100).fill(1),
+          b: Array(100).fill(2),
+        }
         const opts = { maxChunkSize: ObjUtils.getSize(obj.a) * 1.5 }
 
         const chunks = Splitter.split(obj, opts)
         expect(chunks.length).toEqual(2)
+
+        const UUIDV4_REGEX = /[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}/
+        const multiMessageSchema = Joi.object({
+          groupId: Joi.string().required().pattern(UUIDV4_REGEX),
+          chunkIdx: Joi.number().required(),
+          totalChunks: Joi.number().required(),
+        })
 
         chunks.forEach(({ multiMessage }, idx) => {
           expect(() => {
@@ -170,7 +166,7 @@ describe('Splitter', () => {
         })
       })
 
-      it.skip('splits the payload in to the minimum amount of chunks possible', () => {
+      it('splits the payload in to the minimum amount of chunks possible', () => {
         const obj = {
           a: Array(300).fill(1),
           b: Array(300).fill(2),
