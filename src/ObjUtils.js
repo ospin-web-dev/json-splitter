@@ -25,7 +25,7 @@ class ObjUtils {
   }
 
   static getLargestKeyValuePairSize(obj) {
-    // TODO: change to object.entried
+    // TODO: change to object.entries
     return Object.keys(obj).reduce(({ largestKey, largestPairSize }, key) => {
       const value = obj[key]
       const size = this.getKeyValueSize(key, value)

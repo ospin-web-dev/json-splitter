@@ -35,6 +35,14 @@ class Chunk {
     ObjUtils.addKeyValue(this.obj, key, value)
   }
 
+  assignHeader(key, value) {
+    ObjUtils.addKeyValue(this.obj, key, value)
+  }
+
+  mergeObject(obj) {
+    this.obj = { ...this.obj, ...obj }
+  }
+
 }
 
 module.exports = Chunk
