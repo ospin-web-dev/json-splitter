@@ -20,14 +20,13 @@ class ObjUtils {
 
   static getKeyValueSize(key, value) {
     // NOTE: this removes the two additional bytes from the '{}'
-    // if you want the size of the whole object, use `getSize` plainly
+    // if you want the size of the whole object, use `getSize` instead
     return this.getSize({ [key]: value }) - 2
   }
 
   static getLargestKeyValuePairSize(obj) {
     // TODO: change to object.entries
-    return Object.keys(obj).reduce(({ largestKey, largestPairSize }, key) => {
-      const value = obj[key]
+    return Object.entries(obj).reduce(({ largestKey, largestPairSize }, [ key, value ]) => {
       const size = this.getKeyValueSize(key, value)
 
       return size > largestPairSize
