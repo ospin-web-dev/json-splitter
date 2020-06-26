@@ -43,6 +43,10 @@ class Chunk {
     this.obj = { ...this.obj, ...obj }
   }
 
+  nestExistingDataUnder(key) {
+    this.obj = { [key]: this.obj }
+  }
+
 }
 
 module.exports = Chunk

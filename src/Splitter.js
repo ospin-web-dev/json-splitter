@@ -116,7 +116,9 @@ class Splitter {
     this.assertValidMaxChunkSize(target, remainingMaxChunkSize)
 
     const chunks = this.createChunksFromObj(obj[targetKey], chunkSizeLimit)
-    chunks.forEach(chunk => chunk.mergeObject(topLevelData))
+    chunks.forEach(chunk => {
+      chunk.obj = { ...topLevelData, [targetKey]: chunk.obj }
+    })
 
     return chunks
   }

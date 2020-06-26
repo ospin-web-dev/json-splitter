@@ -285,7 +285,7 @@ describe('Splitter', () => {
               data: {
                 targetA: Array(100).fill(1),
                 targetB: Array(100).fill(2),
-                targetc: Array(100).fill(3),
+                targetC: Array(100).fill(3),
               },
             }
 
