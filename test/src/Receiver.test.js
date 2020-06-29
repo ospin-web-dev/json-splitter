@@ -1,9 +1,21 @@
-const merge = require('deepmerge')
-
 const Receiver = require('../../src/Receiver')
-const ObjUtils = require('../../src/ObjUtils')
 
 describe('Receiver', () => {
+
+  describe('new', () => {
+    it('has a default option for timeout if none is provided', () => {
+      const { opts: { timeout } } = new Receiver()
+
+      expect(timeout).toBe(Receiver.DEFAULT_OPTS.timeout)
+    })
+
+    it('sets the timeout option if provided', () => {
+      const nonDefault = Receiver.DEFAULT_OPTS.timeout * 10
+      const { opts: { timeout } } = new Receiver({ timeout: nonDefault })
+
+      expect(timeout).toBe(nonDefault)
+    })
+  })
 
   describe('receive', () => {
     describe('upon receiving an object which does not have a multiMessage key', () => {
@@ -28,11 +40,6 @@ describe('Receiver', () => {
 
         expect(() => receiver.receive(chunk)).toThrowError('totalChunks')
       })
-
-      it('deletes orphaned chunks after they have not resolved within the time out', () => {
-        // { complete: false, chunksOutstanding: x }
-      })
-
     })
 
     describe('upon receiving a chunk which is one of a multiMessage series', () => {
@@ -129,13 +136,109 @@ describe('Receiver', () => {
         })
 
         it('has combined the chunks via right reduce (later keys overwrite previous matching keys) based on their chunkIdx, _and not_ the order they arrived', () => {
-          const chunks = getChunks()
-          const { payload } = completeASeries(chunks)
+          const [ a, b, c ] = getChunks()
 
-          expect(hasMultiMessage).toBe(false)
+          const orderPermutations = [
+            [ a, c, b ],
+            [ b, c, a ],
+            [ b, a, c ],
+            [ c, a, b ],
+            [ c, b, a ],
+          ]
+
+          const { payload: expected } = completeASeries([ a, b, c ])
+
+          orderPermutations.forEach(perm => {
+            const { payload: result } = completeASeries(perm)
+            expect(result).toEqual(expect.objectContaining(expected))
+          })
         })
       })
     })
   })
 
+  describe('removeStalePools', () => {
+    it('is automatically triggered every x ms based on the timout option', async () => {
+      const timeout = 100
+      const intervals = 3
+      const receiver = new Receiver({ timeout })
+
+      receiver.removeStalePools = jest.fn()
+      await new Promise(r => setTimeout(r, timeout * intervals))
+
+      expect(receiver.removeStalePools).toHaveBeenCalledTimes(intervals - 1)
+    })
+
+    it('does not remove chunks which have been updated recently enough', () => {
+      const groupId = '8464f55c-8595-4ac6-92a9-3567d8a5098c'
+
+      const [ a, b ] = [
+        {
+          multiMessage: {
+            groupId,
+            totalChunks: 3,
+            chunkIdx: 2,
+          },
+        },
+        {
+          multiMessage: {
+            groupId,
+            totalChunks: 3,
+            chunkIdx: 0,
+          },
+        },
+      ]
+
+      const receiver = new Receiver()
+      receiver.receive(a)
+      receiver.receive(b)
+
+      const poolsCountPre = Object.keys(receiver.chunkPools).length
+      expect(poolsCountPre).toBe(1)
+
+      receiver.removeStalePools()
+      const poolsCountPost = Object.keys(receiver.chunkPools).length
+      expect(poolsCountPost).toBe(poolsCountPre)
+    })
+
+    it('removes those pools which have an updatedAt > the receivers timeout option', () => {
+      const staleGroupId = '8464f55c-8595-4ac6-92a9-3567d8a5098c'
+      const freshGroupId = '99999999-9999-9999-9999-999999999999'
+
+      const chunks = [
+        {
+          multiMessage: {
+            groupId: staleGroupId,
+            totalChunks: 10,
+            chunkIdx: 0,
+          },
+        },
+        {
+          multiMessage: {
+            groupId: freshGroupId,
+            totalChunks: 5,
+            chunkIdx: 0,
+          },
+        },
+      ]
+
+      const receiver = new Receiver()
+      chunks.forEach(chunk => receiver.receive(chunk))
+
+      const totalPoolsPre = Object.entries(receiver.chunkPools).length
+      expect(totalPoolsPre).toBe(2)
+
+      const stalePool = receiver.getPoolById(staleGroupId)
+      stalePool.updatedAt = Date.now() - receiver.opts.timeout
+
+      receiver.removeStalePools()
+
+      const absent = receiver.getPoolById(staleGroupId)
+      expect(absent).toBe(undefined)
+
+      const totalPoolsPost = Object.entries(receiver.chunkPools).length
+      expect(totalPoolsPost).toBe(1)
+
+    })
+  })
 })

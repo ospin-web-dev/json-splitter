@@ -1,6 +1,7 @@
 const merge = require('deepmerge')
 
 const ObjUtils = require('./ObjUtils')
+const Pool = require('./Pool')
 const Splitter = require('./Splitter')
 
 
@@ -9,8 +10,7 @@ const Splitter = require('./Splitter')
  * they are stored in their respective chunk 'pool'.
  * Each pool holds on to chunks that belong together.
  * Once a pool has received its fulfilling chunk (the last chunk in a series),
- * it returns the combined payload without any chunk meta data. If this were to be
- * refactored/expanded, considering abstracting a pool into its own class.
+ * it returns the combined payload without any chunk meta data.
  *
  * Each Receiver instance is provided with a timeout limit. Once reached,
  * the instance will delete any outstanding chunk pools that have been waiting
@@ -61,47 +61,36 @@ class Receiver {
   }
 
   static removeChunkHeaders(chunk) {
-    // note: this mutates the chunk
     delete chunk[Splitter.DEFAULT_CHUNK_HEADER_KEY]
     return chunk
   }
 
-  static addChunkToPool(pool, chunk) {
-    // note: this mutates the pool
-    const { chunkIdx } = Receiver.getChunkHeaders(chunk)
-
-    const cleanedChunk = Receiver.removeChunkHeaders({ ...chunk })
-    pool[chunkIdx] = cleanedChunk
-  }
-
-  static combinePool(pool) {
-    const overwriteArrs = (_, srcArr) => srcArr
-
-    const payload = merge.all(pool, { arrayMerge: overwriteArrs })
-    delete payload.multiMessage
-
-    return payload
-  }
-
-  static countChunksMissing(pool) {
-    return pool.filter(chunk => chunk === null).length
-  }
-
-  static analyzePool(pool) {
-    const chunksOutstanding = Receiver.countChunksMissing(pool)
-
-    return {
-      complete: chunksOutstanding === 0,
-      chunksOutstanding,
-    }
-  }
-
   constructor(opts = {}) {
-    // const { timeout } = { ...Receiver.DEFAULT_OPTS, ...opts }
+    this.opts = { ...Receiver.DEFAULT_OPTS, ...opts }
+
     this.chunkPools = {}
+    this.startPoolManager()
   }
 
-  removePoolsOlderThan() {
+  startPoolManager() {
+    setInterval(() => {
+      this.removeStalePools()
+    }, this.opts.timeout)
+  }
+
+  deleteChunkPool(poolId) {
+    delete this.chunkPools[poolId]
+  }
+
+  removeStalePools() {
+    const now = Date.now()
+
+    Object.entries(this.chunkPools).forEach(([ poolId, { updatedAt } ]) => {
+      const decay = now - updatedAt
+      const poolIsStale = decay >= this.opts.timeout
+
+      if (poolIsStale) this.deleteChunkPool(poolId)
+    })
   }
 
   poolExistsById(poolId) {
@@ -113,19 +102,21 @@ class Receiver {
   }
 
   createChunkPool(groupId, size) {
-    this.chunkPools[groupId] = Array(size).fill(null)
+    this.chunkPools[groupId] = new Pool(groupId, size)
   }
 
   storeChunk(chunk) {
-    const { groupId, totalChunks } = Receiver.getChunkHeaders(chunk)
+    const { groupId, totalChunks, chunkIdx } = Receiver.getChunkHeaders(chunk)
 
     if (!this.poolExistsById(groupId)) {
       this.createChunkPool(groupId, totalChunks)
     }
 
-    const pool = this.getPoolById(groupId)
+    const cleanedChunk = Receiver.removeChunkHeaders({ ...chunk })
 
-    Receiver.addChunkToPool(pool, chunk)
+    const pool = this.getPoolById(groupId)
+    pool.addChunkAtIdx(chunkIdx, cleanedChunk)
+
     return pool
   }
 
@@ -137,13 +128,13 @@ class Receiver {
     Receiver.assertValidHeaderKeys(chunk)
 
     const chunksPool = this.storeChunk(chunk)
-    const { complete, chunksOutstanding } = Receiver.analyzePool(chunksPool)
+    const { complete, chunksOutstanding } = chunksPool.analyze()
 
     if (!complete) {
       return Receiver.respondIncomplete(chunksOutstanding)
     }
 
-    const payload = Receiver.combinePool(chunksPool)
+    const payload = chunksPool.combine()
     return Receiver.respondComplete(payload)
   }
 
