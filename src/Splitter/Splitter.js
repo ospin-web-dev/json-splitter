@@ -1,6 +1,6 @@
 const uuidv4 = require('uuid').v4
 
-const ObjUtils = require('./ObjUtils')
+const ObjUtils = require('../ObjUtils')
 const Chunk = require('./Chunk')
 
 class Splitter {

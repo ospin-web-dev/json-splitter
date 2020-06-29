@@ -1,4 +1,4 @@
-const ObjUtils = require('./ObjUtils')
+const ObjUtils = require('../ObjUtils')
 
 class Chunk {
 

@@ -1,4 +1,4 @@
-const Receiver = require('../../src/Receiver')
+const Receiver = require('../../src/Receiver/Receiver')
 
 describe('Receiver', () => {
 
@@ -238,7 +238,6 @@ describe('Receiver', () => {
 
       const totalPoolsPost = Object.entries(receiver.chunkPools).length
       expect(totalPoolsPost).toBe(1)
-
     })
   })
 })

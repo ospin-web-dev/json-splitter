@@ -1,9 +1,5 @@
-const merge = require('deepmerge')
-
-const ObjUtils = require('./ObjUtils')
 const Pool = require('./Pool')
-const Splitter = require('./Splitter')
-
+const Splitter = require('../Splitter/Splitter')
 
 /* Receiver is used to accept incoming chunks
  * as chunks arrive (via the `receive` method on an instance),
@@ -16,6 +12,7 @@ const Splitter = require('./Splitter')
  * the instance will delete any outstanding chunk pools that have been waiting
  * to be completed for too long. This should prevent chunks being held on to forever
  * that had a sibling chunk lost in the aether due to a network or upstream issue.
+ * See `startPoolManager`
  */
 
 class Receiver {

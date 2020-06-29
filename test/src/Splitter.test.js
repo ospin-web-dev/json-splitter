@@ -1,6 +1,6 @@
 const Joi = require('@hapi/joi')
 
-const Splitter = require('../../src/Splitter')
+const Splitter = require('../../src/Splitter/Splitter')
 const ObjUtils = require('../../src/ObjUtils')
 
 describe('Splitter', () => {
@@ -17,7 +17,7 @@ describe('Splitter', () => {
 
     describe('when passed an object', () => {
 
-      it('returns a deep clone of the OBJECT', () => {
+      it('returns a deep clone of the object', () => {
         const OBJECT = { a: 1, b: { b1: 'abc', b2: {} } }
         const clone = ObjUtils.serializeToObj(OBJECT)
 
