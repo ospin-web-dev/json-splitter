@@ -1,5 +1,22 @@
+const merge = require('deepmerge')
+
 const ObjUtils = require('./ObjUtils')
 const Splitter = require('./Splitter')
+
+
+/* Receiver is used to accept incoming chunks
+ * as chunks arrive (via the `receive` method on an instance),
+ * they are stored in their respective chunk 'pool'.
+ * Each pool holds on to chunks that belong together.
+ * Once a pool has received its fulfilling chunk (the last chunk in a series),
+ * it returns the combined payload without any chunk meta data. If this were to be
+ * refactored/expanded, considering abstracting a pool into its own class.
+ *
+ * Each Receiver instance is provided with a timeout limit. Once reached,
+ * the instance will delete any outstanding chunk pools that have been waiting
+ * to be completed for too long. This should prevent chunks being held on to forever
+ * that had a sibling chunk lost in the aether due to a network or upstream issue.
+ */
 
 class Receiver {
 
@@ -44,11 +61,13 @@ class Receiver {
   }
 
   static removeChunkHeaders(chunk) {
+    // note: this mutates the chunk
     delete chunk[Splitter.DEFAULT_CHUNK_HEADER_KEY]
     return chunk
   }
 
   static addChunkToPool(pool, chunk) {
+    // note: this mutates the pool
     const { chunkIdx } = Receiver.getChunkHeaders(chunk)
 
     const cleanedChunk = Receiver.removeChunkHeaders({ ...chunk })
@@ -56,7 +75,12 @@ class Receiver {
   }
 
   static combinePool(pool) {
-    // DEEP MERGE
+    const overwriteArrs = (_, srcArr) => srcArr
+
+    const payload = merge.all(pool, { arrayMerge: overwriteArrs })
+    delete payload.multiMessage
+
+    return payload
   }
 
   static countChunksMissing(pool) {
