@@ -24,8 +24,7 @@ class ObjUtils {
     return this.getSize({ [key]: value }) - 2
   }
 
-  static getLargestKeyValuePairSize(obj) {
-    // TODO: change to object.entries
+  static getLargestKeyValuePair(obj) {
     return Object.entries(obj).reduce(({ largestKey, largestPairSize }, [ key, value ]) => {
       const size = this.getKeyValueSize(key, value)
 
@@ -34,6 +33,10 @@ class ObjUtils {
         : { largestKey, largestPairSize }
 
     }, { largestKey: null, largestPairSize: -1 })
+  }
+
+  static getLargestKeyValuePairSize(obj) {
+    return this.getLargestKeyValuePair(obj).largestPairSize
   }
 
   static serializeToObj(value) {

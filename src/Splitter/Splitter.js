@@ -15,7 +15,7 @@ class Splitter {
     return {
       groupId: uuidv4(),
       totalChunks: this.MAX_CHUNKS,
-      chunkIdx: this.MAX_CHUNKS - 1,
+      chunkIdx: this.MAX_CHUNKS,
     }
   }
 
@@ -35,7 +35,7 @@ class Splitter {
   }
 
   static assertValidMaxChunkSize(obj, maxChunkSize) {
-    const { largestKey, largestPairSize } = ObjUtils.getLargestKeyValuePairSize(obj)
+    const { largestKey, largestPairSize } = ObjUtils.getLargestKeyValuePair(obj)
 
     if (maxChunkSize < largestPairSize) {
       const value = obj[largestKey]
@@ -115,7 +115,7 @@ class Splitter {
 
     this.assertValidMaxChunkSize(target, remainingMaxChunkSize)
 
-    const chunks = this.createChunksFromObj(obj[targetKey], chunkSizeLimit)
+    const chunks = this.createChunksFromObj(obj[targetKey], remainingMaxChunkSize)
     chunks.forEach(chunk => {
       chunk.obj = { ...topLevelData, [targetKey]: chunk.obj }
     })

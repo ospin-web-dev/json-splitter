@@ -1,6 +1,7 @@
-const Combiner = require('./src/Combiner')
-const Splitter = require('./src/Splitter')
+const Receiver = require('./src/Receiver/Receiver')
+const Splitter = require('./src/Splitter/Splitter')
 
 module.exports = {
-  Combiner, Splitter
+  Receiver,
+  Splitter,
 }

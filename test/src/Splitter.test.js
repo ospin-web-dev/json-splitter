@@ -119,7 +119,7 @@ describe('Splitter', () => {
           const topLevelKeysSize = ObjUtils.getSize({ a: obj.a, data: {} })
           const {
             largestPairSize: largestTargetKeySize,
-          } = ObjUtils.getLargestKeyValuePairSize(obj.data)
+          } = ObjUtils.getLargestKeyValuePair(obj.data)
 
           const spaceReqWithoutHeaders = topLevelKeysSize + largestTargetKeySize
 
@@ -150,7 +150,7 @@ describe('Splitter', () => {
           a: Array(100).fill(1),
           b: Array(100).fill(2),
         }
-        const { largestPairSize } = ObjUtils.getLargestKeyValuePairSize(obj)
+        const { largestPairSize } = ObjUtils.getLargestKeyValuePair(obj)
         const maxChunkSize = largestPairSize + Splitter.FIXED_CHUNK_SIZE_OVERHEAD
 
         const objs = Splitter.split(obj, { maxChunkSize })
@@ -174,7 +174,7 @@ describe('Splitter', () => {
           c: Array(300).fill(3),
         }
 
-        const { largestPairSize } = ObjUtils.getLargestKeyValuePairSize(obj)
+        const { largestPairSize } = ObjUtils.getLargestKeyValuePair(obj)
         const maxChunkSize = largestPairSize + Splitter.FIXED_CHUNK_SIZE_OVERHEAD
 
         expect(maxChunkSize).toBeLessThan(largestPairSize * 2)
@@ -190,7 +190,7 @@ describe('Splitter', () => {
           c: Array(100).fill(3),
         }
 
-        const { largestPairSize } = ObjUtils.getLargestKeyValuePairSize(obj)
+        const { largestPairSize } = ObjUtils.getLargestKeyValuePair(obj)
 
         const maxChunkSize = largestPairSize + Splitter.FIXED_CHUNK_SIZE_OVERHEAD
 
@@ -213,7 +213,7 @@ describe('Splitter', () => {
             arr: Array(50).fill(1),
           }
 
-          const { largestPairSize } = ObjUtils.getLargestKeyValuePairSize(obj)
+          const { largestPairSize } = ObjUtils.getLargestKeyValuePair(obj)
           const maxChunkSize = largestPairSize + Splitter.FIXED_CHUNK_SIZE_OVERHEAD
 
           Object.keys(obj).forEach(targetKey => {
@@ -234,7 +234,7 @@ describe('Splitter', () => {
               },
             }
 
-            const { largestPairSize } = ObjUtils.getLargestKeyValuePairSize(obj.data)
+            const { largestPairSize } = ObjUtils.getLargestKeyValuePair(obj.data)
 
             const maxChunkSize = largestPairSize
               + Splitter.FIXED_CHUNK_SIZE_OVERHEAD
@@ -259,7 +259,7 @@ describe('Splitter', () => {
               },
             }
 
-            const { largestPairSize } = ObjUtils.getLargestKeyValuePairSize(obj.data)
+            const { largestPairSize } = ObjUtils.getLargestKeyValuePair(obj.data)
 
             const maxChunkSize = largestPairSize
               + Splitter.FIXED_CHUNK_SIZE_OVERHEAD
@@ -289,7 +289,7 @@ describe('Splitter', () => {
               },
             }
 
-            const { largestPairSize } = ObjUtils.getLargestKeyValuePairSize(obj.data)
+            const { largestPairSize } = ObjUtils.getLargestKeyValuePair(obj.data)
 
             const maxChunkSize = largestPairSize
               + Splitter.FIXED_CHUNK_SIZE_OVERHEAD

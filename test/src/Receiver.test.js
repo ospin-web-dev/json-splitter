@@ -172,7 +172,7 @@ describe('Receiver', () => {
     it('does not remove chunks which have been updated recently enough', () => {
       const groupId = '8464f55c-8595-4ac6-92a9-3567d8a5098c'
 
-      const [ a, b ] = [
+      const chunks = [
         {
           multiMessage: {
             groupId,
@@ -190,8 +190,7 @@ describe('Receiver', () => {
       ]
 
       const receiver = new Receiver()
-      receiver.receive(a)
-      receiver.receive(b)
+      receiver.receiveMany(chunks)
 
       const poolsCountPre = Object.keys(receiver.chunkPools).length
       expect(poolsCountPre).toBe(1)

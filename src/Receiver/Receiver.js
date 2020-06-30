@@ -135,6 +135,10 @@ class Receiver {
     return Receiver.respondComplete(payload)
   }
 
+  receiveMany(chunks) {
+    return chunks.reduce((_, chunk) => this.receive(chunk), undefined)
+  }
+
 }
 
 module.exports = Receiver
