@@ -1,7 +1,7 @@
 {
   "name": "@ospin/obj-splitter",
   "author": "danielseehausen",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Split JSON into multiple chunks, based on its size! Are _YOU_ trying to get around pesky protocol payload limits? Do _YOU_ have some other reason to split up big chunks of JSON and are looking for a judgement free solution? **split-JSON** is here for you!",
   "main": "index.js",
   "np": {
