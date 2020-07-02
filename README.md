@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/ospin-web-dev/obj-splitter/branch/master/graph/badge.svg)](https://codecov.io/gh/ospin-web-dev/obj-splitter)
+
 **Split objects into size-limited chunks!**
 
 Are _you_ fed up with pesky MQTT payload size limits?  

@@ -1,5 +1,5 @@
-const { Receiver, Splitter } = require('../../../index.js')
-const ObjUtils = require('../../../src/ObjUtils')
+const { Receiver, Splitter } = require('../../index.js')
+const ObjUtils = require('../../src/ObjUtils')
 
 const process = require('./ProcessData')
 
@@ -11,7 +11,7 @@ function getProcessObj() {
   return JSON.parse(JSON.stringify(process))
 }
 
-// simulate mqtt max of 128kB with 3kb buffer room
+// simulate mqtt max of 128kB with 3kb extra space
 const MAX_SIZE = 125 * 1000
 
 describe('splitting and reconstructing process payloads', () => {

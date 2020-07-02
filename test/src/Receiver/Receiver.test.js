@@ -1,4 +1,4 @@
-const Receiver = require('../../src/Receiver/Receiver')
+const Receiver = require('../../../src/Receiver/Receiver')
 
 describe('Receiver', () => {
 

@@ -22,7 +22,7 @@ class Pool {
   }
 
   analyze() {
-    const chunksOutstanding = this.chunks.filter(chunk => chunk === null).length
+    const chunksOutstanding = this.countChunksMissing()
 
     return {
       complete: chunksOutstanding === 0,

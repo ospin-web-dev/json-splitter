@@ -1,7 +1,7 @@
 const Joi = require('@hapi/joi')
 
-const Splitter = require('../../src/Splitter/Splitter')
-const ObjUtils = require('../../src/ObjUtils')
+const Splitter = require('../../../src/Splitter/Splitter')
+const ObjUtils = require('../../../src/ObjUtils')
 
 describe('Splitter', () => {
 

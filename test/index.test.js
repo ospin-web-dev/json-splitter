@@ -1,5 +1,5 @@
-const { Receiver, Splitter } = require('../../index.js')
-const ObjUtils = require('../../src/ObjUtils')
+const { Receiver, Splitter } = require('../index.js')
+const ObjUtils = require('../src/ObjUtils')
 
 function expectDeepEqual(a, b) {
   expect(a).toEqual(expect.objectContaining(b))

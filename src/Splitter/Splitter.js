@@ -65,14 +65,14 @@ class Splitter {
   static assignHeaderToChunks(chunks) {
     const groupId = uuidv4()
 
-    chunks.forEach((chunk, idx) => chunk.mergeObject({
-      [this.DEFAULT_CHUNK_HEADER_KEY]: {
+    chunks.forEach((chunk, idx) => {
+      chunk.assignHeader(this.DEFAULT_CHUNK_HEADER_KEY, {
         ...this.DEFAULT_CHUNK_HEADER_DATA,
         groupId,
         chunkIdx: idx,
         totalChunks: chunks.length,
-      },
-    }))
+      })
+    })
   }
 
   static get DEFAULT_OPTIONS() {
@@ -115,9 +115,10 @@ class Splitter {
 
     this.assertValidMaxChunkSize(target, remainingMaxChunkSize)
 
-    const chunks = this.createChunksFromObj(obj[targetKey], remainingMaxChunkSize)
+    const chunks = this.createChunksFromObj(target, remainingMaxChunkSize)
     chunks.forEach(chunk => {
-      chunk.obj = { ...topLevelData, [targetKey]: chunk.obj }
+      chunk.nestExistingDataUnderKey(targetKey)
+      chunk.obj = { ...topLevelData, ...chunk.obj }
     })
 
     return chunks

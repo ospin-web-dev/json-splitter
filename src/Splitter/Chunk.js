@@ -39,11 +39,7 @@ class Chunk {
     ObjUtils.addKeyValue(this.obj, key, value)
   }
 
-  mergeObject(obj) {
-    this.obj = { ...this.obj, ...obj }
-  }
-
-  nestExistingDataUnder(key) {
+  nestExistingDataUnderKey(key) {
     this.obj = { [key]: this.obj }
   }
 
