@@ -14,7 +14,7 @@ This package comes with two modules - one to split an object up into _chunks_ (`
 #### End-to-end example
 
 ```js
-const { Splitter, Receiver } = require('@ospin/json-splitter')
+const { Splitter, Receiver } = require('@ospin/obj-splitter')
 
 // here is an object we would like to split up
 const obj = {
